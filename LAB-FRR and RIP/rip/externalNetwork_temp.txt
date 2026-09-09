@@ -1,0 +1,54 @@
+1. Creiamo la rete esterna su r5
+
+Su r5:
+    ip link add ext0 type dummy
+    ip address add 203.0.113.1/24 dev ext0
+    ip link set ext0 up
+
+Controlla:
+    ip -br addr
+    ip route
+
+---------
+
+Su r4
+    ip route add default via 100.2.0.2
+
+---------
+
+Adesso il prossimo passaggio è propagare la default di r4 nel dominio RIP. Su r4:
+    vtysh
+
+poi:
+    configure terminal
+    router rip
+    route 0.0.0.0/0
+    end
+
+    configure terminal
+        entri nella modalità di configurazione di FRRouting. Non stai più usando direttamente i comandi Linux del kernel: stai configurando FRR.
+    
+    router rip
+        entri nella sezione specifica del processo RIP. Da questo momento i comandi riguardano il daemon ripd.
+
+    route 0.0.0.0/0
+        dici al processo RIP:
+        “considera 0.0.0.0/0 come una rotta da inserire/annunciare tramite RIP.”
+
+        Il materiale la definisce proprio come configurazione statica della default route dentro RIP, e lo step è chiamato “propagating the default route into RIP”.
+
+    end
+        esci dalla modalità di configurazione e torni al prompt operativo di vtysh.
+
+---------
+
+Su r1
+    ip route
+
+NB -> 203.0.113.1/24 
+Su r1 non compare 203.0.113.0/24 perché quella rete non è stata annunciata a RIP. 
+r1 la raggiunge grazie alla default route che hai appena propagato.
+
+R>* 0.0.0.0/0 [120/2] via 100.1.0.14, eth0
+
+SIGNIFICA: per qualunque destinazione per cui non esista una rotta più specifica, manda il pacchetto a 100.1.0.14, cioè r4.
